@@ -1,81 +1,98 @@
 import cv2
-import os
+import numpy as np
 
-# Paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROTOTXT = os.path.join(BASE_DIR, "models", "face_detector", "deploy.prototxt")
-MODEL = os.path.join(BASE_DIR, "models", "face_detector", "res10_300x300_ssd_iter_140000.caffemodel")
+from app.attendance import AttendanceManager
+from utils.storage import load_embeddings
+from app.face_detector import FaceDetector
+from app.embedder import FaceEmbedder
+from app.enrollment import Enroller
+from app.recognition import FaceRecognizer
+
 
 def main():
-    net = cv2.dnn.readNetFromCaffe(PROTOTXT, MODEL)
-
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        print("Camera not accessible")
+        print("❌ Camera not accessible")
         return
 
-    print("Face detection + cropping started. Press Q to quit.")
+    detector = FaceDetector()
+    embedder = FaceEmbedder()
+
+    embeddings_db = load_embeddings()
+    recognizer = FaceRecognizer(embeddings_db)
+
+    # 🔹 Attendance manager
+    attendance = AttendanceManager(cooldown_seconds=60)
+
+    # 🔹 Enrollment with live recognizer update
+    enroller = Enroller(
+        embeddings_db,
+        on_update=lambda db: recognizer.update_db(db)
+    )
+
+    print("✅ Press E to enroll | Q to quit")
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
 
-        (h, w) = frame.shape[:2]
+        key = cv2.waitKey(1) & 0xFF
 
-        blob = cv2.dnn.blobFromImage(
-            cv2.resize(frame, (300, 300)),
-            1.0,
-            (300, 300),
-            (104.0, 177.0, 123.0)
-        )
+        if key == ord("e") and not enroller.active:
+            student_id = input("Enter Student ID / Name: ").strip()
+            if student_id:
+                enroller.start(student_id)
 
-        net.setInput(blob)
-        detections = net.forward()
-
-        face_count = 0
-
-        for i in range(detections.shape[2]):
-            confidence = detections[0, 0, i, 2]
-
-            if confidence > 0.5:
-                box = detections[0, 0, i, 3:7] * [w, h, w, h]
-                (x1, y1, x2, y2) = box.astype("int")
-
-                # Clamp values to image bounds
-                x1, y1 = max(0, x1), max(0, y1)
-                x2, y2 = min(w, x2), min(h, y2)
-
-                face = frame[y1:y2, x1:x2]
-
-                if face.size == 0:
-                    continue
-
-                face_count += 1
-
-                # Draw box
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-                # Show cropped face (debug window)
-                cv2.imshow(f"Face_{face_count}", face)
-
-        cv2.putText(
-            frame,
-            f"Faces: {face_count}",
-            (10, 30),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            (0, 255, 0),
-            2
-        )
-
-        cv2.imshow("Face Detection", frame)
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        elif key == ord("q"):
             break
+
+        boxes = detector.detect(frame)
+
+        for (x1, y1, x2, y2) in boxes:
+            face = frame[y1:y2, x1:x2]
+            if face.size == 0:
+                continue
+
+            face = cv2.resize(face, (160, 160))
+            face = np.expand_dims(face, axis=0)
+
+            embedding = embedder.get_embedding(face)
+
+            # 🔴 Enrollment mode
+            if enroller.active:
+                enroller.process(embedding, frame)
+                label = f"Enrolling: {enroller.name}"
+                color = (0, 0, 255)
+
+            # 🟢 Recognition + Attendance
+            else:
+                name, score = recognizer.recognize(embedding)
+
+                if name != "Unknown":
+                    attendance.mark_attendance(name)
+                    color = (0, 255, 0)
+                else:
+                    color = (0, 0, 255)
+
+                label = f"{name} ({score:.2f})"
+
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(
+                frame,
+                label,
+                (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                color,
+                2,
+            )
+
+        cv2.imshow("Face Attendance System", frame)
 
     cap.release()
     cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()
