@@ -1,0 +1,11 @@
+numpy
+opencv-python
+pandas
+scikit-learn
+tensorflow==2.13.0
+keras==2.13.1
+pyside6
+gspread
+google-auth
+pillow
+imutils
