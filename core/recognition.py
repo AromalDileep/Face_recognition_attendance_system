@@ -12,6 +12,10 @@ class FaceRecognizer:
         self.threshold = threshold
         self.mean_db = self._build_mean_embeddings()
 
+    def update_db(self, embeddings_db):
+        self.db = embeddings_db
+        self.mean_db = self._build_mean_embeddings()
+
     def _l2_normalize(self, v):
         return v / (norm(v) + 1e-10)
 
