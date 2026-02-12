@@ -12,6 +12,8 @@ from PySide6.QtWidgets import (
     QStackedWidget,
     QMessageBox,
     QListWidget,
+    QHBoxLayout,
+    QListWidgetItem,
 )
 
 from PySide6.QtGui import QImage, QPixmap
@@ -166,12 +168,10 @@ class MainWindow(QWidget):
         self.page_manage.setLayout(self.manage_layout)
 
         self.student_list = QListWidget()
-        self.btn_delete = QPushButton("Delete Selected")
         self.btn_back = QPushButton("Back to Menu")
 
         self.manage_layout.addWidget(QLabel("Enrolled Students:"))
         self.manage_layout.addWidget(self.student_list)
-        self.manage_layout.addWidget(self.btn_delete)
         self.manage_layout.addWidget(self.btn_back)
 
         # Add pages to stack
@@ -189,7 +189,6 @@ class MainWindow(QWidget):
         self.btn_enroll.clicked.connect(self.start_enrollment)
         self.btn_manage.clicked.connect(self.open_manage_page)
         self.btn_stop.clicked.connect(self.stop_camera)
-        self.btn_delete.clicked.connect(self.delete_student)
         self.btn_back.clicked.connect(self.go_back_to_menu)
 
     def start_attendance(self):
@@ -230,18 +229,28 @@ class MainWindow(QWidget):
 
     def load_students(self):
         self.student_list.clear()
-        # Ensure we are using the latest DB state
-        # (It is shared with camera_thread, so it should be up to date)
         if hasattr(self.camera_thread, 'embeddings_db'):
             for name in self.camera_thread.embeddings_db.keys():
-                self.student_list.addItem(name)
+                item = QListWidgetItem(self.student_list)
+                widget = QWidget()
+                layout = QHBoxLayout()
+                layout.setContentsMargins(5, 5, 5, 5)
+                
+                label = QLabel(name)
+                btn_delete = QPushButton("Delete")
+                btn_delete.setStyleSheet("background-color: #ffcccc; color: red;")
+                # Use a default argument in lambda to capture the current name
+                btn_delete.clicked.connect(lambda checked, n=name: self.delete_student(n))
+                
+                layout.addWidget(label)
+                layout.addStretch()
+                layout.addWidget(btn_delete)
+                
+                widget.setLayout(layout)
+                item.setSizeHint(widget.sizeHint())
+                self.student_list.setItemWidget(item, widget)
 
-    def delete_student(self):
-        current_item = self.student_list.currentItem()
-        if not current_item:
-            return
-
-        name = current_item.text()
+    def delete_student(self, name):
         reply = QMessageBox.question(
             self, "Confirm Delete", f"Delete {name}?",
             QMessageBox.Yes | QMessageBox.No
