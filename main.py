@@ -1,12 +1,12 @@
 import cv2
 import numpy as np
 
-from app.attendance import AttendanceManager
+from core.attendance import AttendanceManager
 from utils.storage import load_embeddings
-from app.face_detector import FaceDetector
-from app.embedder import FaceEmbedder
-from app.enrollment import Enroller
-from app.recognition import FaceRecognizer
+from core.face_detector import FaceDetector
+from core.embedder import FaceEmbedder
+from core.enrollment import Enroller
+from core.recognition import FaceRecognizer
 
 
 def main():

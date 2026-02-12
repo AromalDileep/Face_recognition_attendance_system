@@ -14,12 +14,12 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtCore import QThread, Signal
 
-from app.attendance import AttendanceManager
+from core.attendance import AttendanceManager
 from utils.storage import load_embeddings
-from app.face_detector import FaceDetector
-from app.embedder import FaceEmbedder
-from app.enrollment import Enroller
-from app.recognition import FaceRecognizer
+from core.face_detector import FaceDetector
+from core.embedder import FaceEmbedder
+from core.enrollment import Enroller
+from core.recognition import FaceRecognizer
 
 
 # ---------------- CAMERA THREAD ---------------- #
