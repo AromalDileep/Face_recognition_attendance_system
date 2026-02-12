@@ -9,10 +9,12 @@ from PySide6.QtWidgets import (
     QPushButton,
     QLabel,
     QInputDialog,
+    QStackedWidget,
+    QMessageBox,
 )
 
 from PySide6.QtGui import QImage, QPixmap
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QThread, Signal, Qt
 
 from core.attendance import AttendanceManager
 from utils.storage import load_embeddings
@@ -26,6 +28,7 @@ from core.recognition import FaceRecognizer
 
 class CameraThread(QThread):
     frame_signal = Signal(np.ndarray)
+    enrollment_finished = Signal()
 
     def __init__(self):
         super().__init__()
@@ -56,6 +59,10 @@ class CameraThread(QThread):
                 break
 
             boxes = self.detector.detect(frame)
+            if len(boxes) > 0:
+                print(f"Debug: Faces detected: {len(boxes)}")
+            else:
+                pass # print("Debug: No faces detected")
 
             for (x1, y1, x2, y2) in boxes:
                 face = frame[y1:y2, x1:x2]
@@ -71,6 +78,9 @@ class CameraThread(QThread):
                     self.enroller.process(embedding, frame)
                     label = f"Enrolling: {self.enroller.name}"
                     color = (0, 0, 255)
+                    
+                    if not self.enroller.active:
+                        self.enrollment_finished.emit()
                 else:
                     name, score = self.recognizer.recognize(embedding)
 
@@ -111,36 +121,60 @@ class MainWindow(QWidget):
         self.setWindowTitle("Face Recognition Attendance System")
         self.resize(900, 700)
 
-        self.layout = QVBoxLayout()
+        # Main Stacked Layout
+        self.stack = QStackedWidget()
+        self.main_layout = QVBoxLayout()
+        self.main_layout.addWidget(self.stack)
+        self.setLayout(self.main_layout)
+
+        # --- Page 1: Main Menu ---
+        self.page_menu = QWidget()
+        self.menu_layout = QVBoxLayout()
+        self.page_menu.setLayout(self.menu_layout)
+
+        self.btn_take_attendance = QPushButton("Take Attendance")
+        self.btn_enroll = QPushButton("Enroll Student")
+        
+        # Styling for menu buttons
+        self.btn_take_attendance.setMinimumHeight(50)
+        self.btn_enroll.setMinimumHeight(50)
+
+        self.menu_layout.addStretch()
+        self.menu_layout.addWidget(self.btn_take_attendance)
+        self.menu_layout.addWidget(self.btn_enroll)
+        self.menu_layout.addStretch()
+
+        # --- Page 2: Camera View ---
+        self.page_camera = QWidget()
+        self.camera_layout = QVBoxLayout()
+        self.page_camera.setLayout(self.camera_layout)
 
         self.video_label = QLabel("Camera Feed")
-        self.layout.addWidget(self.video_label)
+        self.video_label.setAlignment(Qt.AlignCenter) # Align center
+        self.btn_stop = QPushButton("Stop")
 
-        self.start_button = QPushButton("Start Camera")
-        self.stop_button = QPushButton("Stop Camera")
-        self.enroll_button = QPushButton("Enroll Student")
+        self.camera_layout.addWidget(self.video_label)
+        self.camera_layout.addWidget(self.btn_stop)
 
-        self.layout.addWidget(self.start_button)
-        self.layout.addWidget(self.enroll_button)
-        self.layout.addWidget(self.stop_button)
+        # Add pages to stack
+        self.stack.addWidget(self.page_menu)
+        self.stack.addWidget(self.page_camera)
 
-        self.setLayout(self.layout)
-
+        # Camera Thread
         self.camera_thread = CameraThread()
-
-        self.start_button.clicked.connect(self.start_camera)
-        self.stop_button.clicked.connect(self.stop_camera)
-        self.enroll_button.clicked.connect(self.start_enrollment)
-
         self.camera_thread.frame_signal.connect(self.update_image)
+        self.camera_thread.enrollment_finished.connect(self.on_enrollment_finished)
 
-    def start_camera(self):
+        # Connections
+        self.btn_take_attendance.clicked.connect(self.start_attendance)
+        self.btn_enroll.clicked.connect(self.start_enrollment)
+        self.btn_stop.clicked.connect(self.stop_camera)
+
+    def start_attendance(self):
+        self.stack.setCurrentWidget(self.page_camera)
+        self.btn_stop.setVisible(True)
         if not self.camera_thread.isRunning():
             self.camera_thread.start()
-
-    def stop_camera(self):
-        if self.camera_thread.isRunning():
-            self.camera_thread.stop()
 
     def start_enrollment(self):
         name, ok = QInputDialog.getText(
@@ -151,7 +185,21 @@ class MainWindow(QWidget):
 
         if ok and name.strip():
             self.camera_thread.enroller.start(name.strip())
+            self.stack.setCurrentWidget(self.page_camera)
+            self.btn_stop.setVisible(False)
+            if not self.camera_thread.isRunning():
+                self.camera_thread.start()
 
+    def stop_camera(self):
+        if self.camera_thread.isRunning():
+            self.camera_thread.stop()
+        self.stack.setCurrentWidget(self.page_menu)
+        self.video_label.setText("Camera Feed") # Reset label
+        self.btn_stop.setVisible(True)
+
+    def on_enrollment_finished(self):
+        self.stop_camera()
+        QMessageBox.information(self, "Enrollment", "Enrollment Complete!")
 
     def update_image(self, frame):
         rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
