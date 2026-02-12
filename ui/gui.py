@@ -14,9 +14,10 @@ from PySide6.QtWidgets import (
     QListWidget,
     QHBoxLayout,
     QListWidgetItem,
+    QSplashScreen,
 )
 
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtGui import QImage, QPixmap, QFont
 from PySide6.QtCore import QThread, Signal, Qt
 
 from core.attendance import AttendanceManager
@@ -291,6 +292,31 @@ class MainWindow(QWidget):
 
 def run_gui():
     app = QApplication(sys.argv)
+
+    # --- Loading Screen (Splash) ---
+    pixmap = QPixmap(400, 200)
+    pixmap.fill(Qt.black)
+    splash = QSplashScreen(pixmap, Qt.WindowStaysOnTopHint)
+    
+    # Custom font for splash
+    font = QFont()
+    font.setPixelSize(14)
+    font.setBold(True)
+    splash.setFont(font)
+    
+    splash.showMessage(
+        "Loading Face Recognition Models...\nPlease Wait...", 
+        Qt.AlignCenter, 
+        Qt.white
+    )
+    splash.show()
+    
+    # Force event loop to render splash before blocking init
+    app.processEvents()
+
+    # This initialization takes time (model loading)
     window = MainWindow()
+    
     window.show()
+    splash.finish(window) # Close splash when window is ready
     sys.exit(app.exec())
