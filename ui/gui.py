@@ -20,12 +20,41 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QImage, QPixmap, QFont
 from PySide6.QtCore import QThread, Signal, Qt
 
-from core.attendance import AttendanceManager
-from utils.storage import load_embeddings, save_embeddings
-from core.face_detector import FaceDetector
-from core.embedder import FaceEmbedder
-from core.enrollment import Enroller
-from core.recognition import FaceRecognizer
+
+# ---------------- CAMERA THREAD ---------------- #
+
+# ---------------- MODEL LOADER THREAD ---------------- #
+
+class ModelLoader(QThread):
+    finished_loading = Signal(object) # param: dict of components
+
+    def run(self):
+        # Initialize heavy components here
+        # Lazy imports to speed up splash screen appearance
+        from core.face_detector import FaceDetector
+        from core.embedder import FaceEmbedder
+        from core.recognition import FaceRecognizer
+        from core.attendance import AttendanceManager
+        from utils.storage import load_embeddings
+
+        components = {}
+        
+        print("Loading FaceDetector...")
+        components['detector'] = FaceDetector()
+        
+        print("Loading FaceEmbedder...")
+        components['embedder'] = FaceEmbedder()
+        
+        print("Loading Embeddings DB...")
+        components['embeddings_db'] = load_embeddings()
+        
+        print("Initializing FaceRecognizer...")
+        components['recognizer'] = FaceRecognizer(components['embeddings_db'])
+        
+        print("Initializing AttendanceManager...")
+        components['attendance'] = AttendanceManager()
+        
+        self.finished_loading.emit(components)
 
 
 # ---------------- CAMERA THREAD ---------------- #
@@ -34,17 +63,20 @@ class CameraThread(QThread):
     frame_signal = Signal(np.ndarray)
     enrollment_finished = Signal()
 
-    def __init__(self):
+    def __init__(self, components):
         super().__init__()
         self.running = False
 
-        self.detector = FaceDetector()
-        self.embedder = FaceEmbedder()
+        self.detector = components['detector']
+        self.embedder = components['embedder']
+        self.embeddings_db = components['embeddings_db']
+        self.recognizer = components['recognizer']
+        self.attendance = components['attendance']
 
-        self.embeddings_db = load_embeddings()
-        self.recognizer = FaceRecognizer(self.embeddings_db)
-        self.attendance = AttendanceManager()
+        self.recognizer = components['recognizer']
+        self.attendance = components['attendance']
 
+        from core.enrollment import Enroller
         self.enroller = Enroller(
             self.embeddings_db,
             on_update=lambda db: self.recognizer.update_db(db),
@@ -119,8 +151,9 @@ class CameraThread(QThread):
 # ---------------- GUI WINDOW ---------------- #
 
 class MainWindow(QWidget):
-    def __init__(self):
+    def __init__(self, components):
         super().__init__()
+        self.components = components
 
         self.setWindowTitle("Face Recognition Attendance System")
         self.resize(900, 700)
@@ -181,7 +214,7 @@ class MainWindow(QWidget):
         self.stack.addWidget(self.page_manage)
 
         # Camera Thread
-        self.camera_thread = CameraThread()
+        self.camera_thread = CameraThread(self.components)
         self.camera_thread.frame_signal.connect(self.update_image)
         self.camera_thread.enrollment_finished.connect(self.on_enrollment_finished)
 
@@ -258,6 +291,7 @@ class MainWindow(QWidget):
         )
 
         if reply == QMessageBox.Yes:
+            from utils.storage import save_embeddings
             if name in self.camera_thread.embeddings_db:
                 del self.camera_thread.embeddings_db[name]
                 save_embeddings(self.camera_thread.embeddings_db)
@@ -305,18 +339,36 @@ def run_gui():
     splash.setFont(font)
     
     splash.showMessage(
-        "Loading Face Recognition Models...\nPlease Wait...", 
+        "Loading Face Recognition Models...\nThis may take a few seconds...", 
         Qt.AlignCenter, 
         Qt.white
     )
     splash.show()
     
-    # Force event loop to render splash before blocking init
+    # Force event loop to render splash
     app.processEvents()
 
-    # This initialization takes time (model loading)
-    window = MainWindow()
+    # Define cleanup/start function
+    # We must keep references to window to prevent garbage collection
+    # Using a container list or global variable is a common trick in simple scripts,
+    # or defining a class for the application controller.
+    # Here we can use a closure.
     
-    window.show()
-    splash.finish(window) # Close splash when window is ready
+    # Container for the main window to keep it alive
+    refs = {}
+
+    def start_app(components):
+        window = MainWindow(components)
+        window.show()
+        refs['window'] = window # Keep reference
+        splash.finish(window)
+
+    # Start Loader
+    loader = ModelLoader()
+    loader.finished_loading.connect(start_app)
+    loader.start()
+    
+    # Keep loader reference to prevent GC
+    refs['loader'] = loader
+
     sys.exit(app.exec())
