@@ -226,10 +226,23 @@ class MainWindow(QWidget):
         self.btn_back.clicked.connect(self.go_back_to_menu)
 
     def start_attendance(self):
-        self.stack.setCurrentWidget(self.page_camera)
-        self.btn_stop.setVisible(True)
-        if not self.camera_thread.isRunning():
-            self.camera_thread.start()
+        periods = [f"Period-{i}" for i in range(1, 7)] # Period-1 to Period-6
+        period, ok = QInputDialog.getItem(
+            self, "Select Period", "Choose Class Period:", periods, 0, False
+        )
+
+        if ok and period:
+            # Set the period in the backend
+            if hasattr(self.camera_thread, 'attendance'):
+                success = self.camera_thread.attendance.start_session(period)
+                if not success:
+                    QMessageBox.warning(self, "Error", f"Sheet '{period}' not found in Google Sheets!")
+                    return
+
+            self.stack.setCurrentWidget(self.page_camera)
+            self.btn_stop.setVisible(True)
+            if not self.camera_thread.isRunning():
+                self.camera_thread.start()
 
     def start_enrollment(self):
         name, ok = QInputDialog.getText(

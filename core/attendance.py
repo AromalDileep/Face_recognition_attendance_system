@@ -26,7 +26,25 @@ class AttendanceManager:
         )
         client = gspread.authorize(creds)
 
-        self.sheet = client.open("Face Recognition Attendance").worksheet("Sheet1")
+        self.spreadsheet = client.open("Face Recognition Attendance")
+        # Initialize with None, wait for start_session
+        self.sheet = None
+        try:
+             self.sheet = self.spreadsheet.worksheet("Sheet1")
+        except:
+             pass # Sheet1 might not exist, will be set later via start_session
+
+    def start_session(self, sheet_name):
+        """
+        Switch to a specific worksheet (e.g., 'Period-1')
+        """
+        try:
+            self.sheet = self.spreadsheet.worksheet(sheet_name)
+            print(f"✅ Switched to sheet: {sheet_name}")
+            return True
+        except gspread.WorksheetNotFound:
+            print(f"❌ Worksheet '{sheet_name}' not found!")
+            return False
 
     def can_mark(self, student_id):
         """
@@ -41,6 +59,10 @@ class AttendanceManager:
         """
         Write attendance to Google Sheet
         """
+        if self.sheet is None:
+            print("⚠️ No sheet selected! Cannot mark attendance.")
+            return False
+
         if not self.can_mark(student_id):
             return False
 
