@@ -169,14 +169,19 @@ class MainWindow(QWidget):
         self.menu_layout = QVBoxLayout()
         self.page_menu.setLayout(self.menu_layout)
 
-        self.btn_take_attendance = QPushButton("Take Attendance")
-        self.btn_enroll = QPushButton("Enroll Student")
-        self.btn_manage = QPushButton("Manage Students")
+        self.btn_take_attendance = QPushButton("&Take Attendance") # Alt+T
+        self.btn_enroll = QPushButton("&Enroll Student") # Alt+E
+        self.btn_manage = QPushButton("&Manage Students") # Alt+M
         
         # Styling for menu buttons
         self.btn_take_attendance.setMinimumHeight(50)
         self.btn_enroll.setMinimumHeight(50)
         self.btn_manage.setMinimumHeight(50)
+
+        # Enable Enter key
+        self.btn_take_attendance.setAutoDefault(True)
+        self.btn_enroll.setAutoDefault(True)
+        self.btn_manage.setAutoDefault(True)
 
         self.menu_layout.addStretch()
         self.menu_layout.addWidget(self.btn_take_attendance)
@@ -191,7 +196,8 @@ class MainWindow(QWidget):
 
         self.video_label = QLabel("Camera Feed")
         self.video_label.setAlignment(Qt.AlignCenter) # Align center
-        self.btn_stop = QPushButton("Stop")
+        self.btn_stop = QPushButton("&Stop") # Alt+S
+        self.btn_stop.setAutoDefault(True)
 
         self.camera_layout.addWidget(self.video_label)
         self.camera_layout.addWidget(self.btn_stop)
@@ -202,7 +208,8 @@ class MainWindow(QWidget):
         self.page_manage.setLayout(self.manage_layout)
 
         self.student_list = QListWidget()
-        self.btn_back = QPushButton("Back to Menu")
+        self.btn_back = QPushButton("&Back to Menu") # Alt+B
+        self.btn_back.setAutoDefault(True)
 
         self.manage_layout.addWidget(QLabel("Enrolled Students:"))
         self.manage_layout.addWidget(self.student_list)
@@ -284,7 +291,8 @@ class MainWindow(QWidget):
                 layout.setContentsMargins(5, 5, 5, 5)
                 
                 label = QLabel(name)
-                btn_delete = QPushButton("Delete")
+                btn_delete = QPushButton("&Delete") # Alt+D
+                btn_delete.setAutoDefault(True)
                 btn_delete.setStyleSheet("background-color: #ffcccc; color: red;")
                 # Use a default argument in lambda to capture the current name
                 btn_delete.clicked.connect(lambda checked, n=name: self.delete_student(n))
