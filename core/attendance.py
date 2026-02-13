@@ -40,10 +40,10 @@ class AttendanceManager:
         """
         try:
             self.sheet = self.spreadsheet.worksheet(sheet_name)
-            print(f"✅ Switched to sheet: {sheet_name}")
+            print(f"Switched to sheet: {sheet_name}")
             return True
         except gspread.WorksheetNotFound:
-            print(f"❌ Worksheet '{sheet_name}' not found!")
+            print(f" Worksheet '{sheet_name}' not found!")
             return False
 
     def can_mark(self, student_id):
@@ -75,6 +75,6 @@ class AttendanceManager:
         )
 
         self.last_marked[student_id] = time.time()
-        print(f"✅ Attendance marked for {student_id}")
+        print(f"Attendance marked for {student_id}")
 
         return True

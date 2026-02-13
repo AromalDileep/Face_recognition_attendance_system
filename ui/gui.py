@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QListWidgetItem,
     QSplashScreen,
+    QDialog,
+    QGridLayout,
 )
 
 from PySide6.QtGui import QImage, QPixmap, QFont
@@ -150,6 +152,43 @@ class CameraThread(QThread):
 
 # ---------------- GUI WINDOW ---------------- #
 
+class PeriodSelectionDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Select Period")
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+        
+        self.label = QLabel("Press 1-6 to select a period:")
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setFont(QFont("Arial", 12, QFont.Bold))
+        self.layout.addWidget(self.label)
+        
+        self.grid = QGridLayout()
+        self.layout.addLayout(self.grid)
+        
+        self.selected_period = None
+        
+        positions = [(i, j) for i in range(2) for j in range(3)]
+        
+        for i, pos in zip(range(1, 7), positions):
+            btn = QPushButton(f"Period {i}")
+            btn.setMinimumHeight(40)
+            btn.clicked.connect(lambda checked, p=i: self.select_period(p))
+            self.grid.addWidget(btn, *pos)
+            
+    def keyPressEvent(self, event):
+        key = event.key()
+        if Qt.Key_1 <= key <= Qt.Key_6:
+            self.select_period(key - 48) # Qt.Key_0 is 48
+        else:
+            super().keyPressEvent(event)
+            
+    def select_period(self, period_num):
+        self.selected_period = f"Period-{period_num}"
+        self.accept()
+
+
 class MainWindow(QWidget):
     def __init__(self, components):
         super().__init__()
@@ -233,12 +272,10 @@ class MainWindow(QWidget):
         self.btn_back.clicked.connect(self.go_back_to_menu)
 
     def start_attendance(self):
-        periods = [f"Period-{i}" for i in range(1, 7)] # Period-1 to Period-6
-        period, ok = QInputDialog.getItem(
-            self, "Select Period", "Choose Class Period:", periods, 0, False
-        )
-
-        if ok and period:
+        dialog = PeriodSelectionDialog(self)
+        if dialog.exec():
+            period = dialog.selected_period
+            
             # Set the period in the backend
             if hasattr(self.camera_thread, 'attendance'):
                 success = self.camera_thread.attendance.start_session(period)
