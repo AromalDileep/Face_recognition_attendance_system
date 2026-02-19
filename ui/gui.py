@@ -87,8 +87,14 @@ class CameraThread(QThread):
         )
 
     def run(self):
-        cap = cv2.VideoCapture(0)
+        # Try external camera (index 1) first, then internal (index 0)
+        cap = cv2.VideoCapture(1, cv2.CAP_DSHOW) # standard backend for windows
         if not cap.isOpened():
+            print("External camera not found, trying default camera...")
+            cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            
+        if not cap.isOpened():
+            print("Error: No camera found!")
             return
 
         self.running = True
