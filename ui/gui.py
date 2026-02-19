@@ -1,6 +1,8 @@
 import sys
 import cv2
 import numpy as np
+import threading
+from utils.serial_controller import trigger_motor
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -282,6 +284,9 @@ class MainWindow(QWidget):
                 if not success:
                     QMessageBox.warning(self, "Error", f"Sheet '{period}' not found in Google Sheets!")
                     return
+
+            # Trigger motor in background to not block UI
+            threading.Thread(target=trigger_motor, daemon=True).start()
 
             self.stack.setCurrentWidget(self.page_camera)
             self.btn_stop.setVisible(True)
