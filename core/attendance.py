@@ -26,7 +26,9 @@ class AttendanceManager:
         )
         client = gspread.authorize(creds)
 
-        self.spreadsheet = client.open("Face Recognition Attendance")
+        self.spreadsheet = client.open_by_key(
+    "1-70G5vrsf2xjhCFW8MAM-TjyGiad74r2anv9iBDYMBE"
+)
         # Initialize with None, wait for start_session
         self.sheet = None
         try:
