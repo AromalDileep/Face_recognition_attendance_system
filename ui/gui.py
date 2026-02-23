@@ -2,7 +2,7 @@ import sys
 import cv2
 import numpy as np
 import threading
-from utils.serial_controller import trigger_motor
+from utils.serial_controller import send_start_signal, send_stop_signal
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -278,6 +278,8 @@ class MainWindow(QWidget):
         self.btn_manage.clicked.connect(self.open_manage_page)
         self.btn_stop.clicked.connect(self.stop_camera)
         self.btn_back.clicked.connect(self.go_back_to_menu)
+        
+        self.is_taking_attendance = False
 
     def start_attendance(self):
         dialog = PeriodSelectionDialog(self)
@@ -292,7 +294,8 @@ class MainWindow(QWidget):
                     return
 
             # Trigger motor in background to not block UI
-            threading.Thread(target=trigger_motor, daemon=True).start()
+            self.is_taking_attendance = True
+            threading.Thread(target=send_start_signal, daemon=True).start()
 
             self.stack.setCurrentWidget(self.page_camera)
             self.btn_stop.setVisible(True)
@@ -307,6 +310,7 @@ class MainWindow(QWidget):
         )
 
         if ok and name.strip():
+            self.is_taking_attendance = False
             self.camera_thread.enroller.start(name.strip())
             self.stack.setCurrentWidget(self.page_camera)
             self.btn_stop.setVisible(False)
@@ -316,6 +320,11 @@ class MainWindow(QWidget):
     def stop_camera(self):
         if self.camera_thread.isRunning():
             self.camera_thread.stop()
+            
+        if getattr(self, 'is_taking_attendance', False):
+            threading.Thread(target=send_stop_signal, daemon=True).start()
+            self.is_taking_attendance = False
+
         self.stack.setCurrentWidget(self.page_menu)
         self.video_label.setText("Camera Feed") # Reset label
         self.btn_stop.setVisible(True)
