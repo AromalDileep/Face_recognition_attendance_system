@@ -1,6 +1,12 @@
 import os
+import sys
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+def get_base_path():
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+BASE_DIR = get_base_path()
 
 PROTOTXT = os.path.join(
     BASE_DIR, "models", "face_detector", "deploy.prototxt"
