@@ -6,7 +6,7 @@ import logging
 def find_arduino_port():
     ports = serial.tools.list_ports.comports()
     for port in ports:
-        if "Arduino" in port.description or "USB-SERIAL" in port.description:
+        if "2341:0043" in port.hwid:
             return port.device
     return None
 
