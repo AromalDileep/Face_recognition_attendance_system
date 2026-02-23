@@ -2,6 +2,7 @@ import sys
 import cv2
 import numpy as np
 import threading
+import logging
 from utils.serial_controller import send_start_signal, send_stop_signal
 
 from PySide6.QtWidgets import (
@@ -43,19 +44,19 @@ class ModelLoader(QThread):
 
         components = {}
         
-        print("Loading FaceDetector...")
+        logging.info("Loading FaceDetector...")
         components['detector'] = FaceDetector()
         
-        print("Loading FaceEmbedder...")
+        logging.info("Loading FaceEmbedder...")
         components['embedder'] = FaceEmbedder()
         
-        print("Loading Embeddings DB...")
+        logging.info("Loading Embeddings DB...")
         components['embeddings_db'] = load_embeddings()
         
-        print("Initializing FaceRecognizer...")
+        logging.info("Initializing FaceRecognizer...")
         components['recognizer'] = FaceRecognizer(components['embeddings_db'])
         
-        print("Initializing AttendanceManager...")
+        logging.info("Initializing AttendanceManager...")
         components['attendance'] = AttendanceManager()
         
         self.finished_loading.emit(components)
@@ -90,11 +91,11 @@ class CameraThread(QThread):
         # Try external camera (index 1) first, then internal (index 0)
         cap = cv2.VideoCapture(1, cv2.CAP_DSHOW) # standard backend for windows
         if not cap.isOpened():
-            print("External camera not found, trying default camera...")
+            logging.warning("External camera not found, trying default camera...")
             cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
             
         if not cap.isOpened():
-            print("Error: No camera found!")
+            logging.error("Error: No camera found!")
             return
 
         self.running = True
@@ -106,9 +107,9 @@ class CameraThread(QThread):
 
             boxes = self.detector.detect(frame)
             if len(boxes) > 0:
-                print(f"Debug: Faces detected: {len(boxes)}")
+                logging.debug(f"Faces detected: {len(boxes)}")
             else:
-                pass # print("Debug: No faces detected")
+                pass # logging.debug("No faces detected")
 
             for (x1, y1, x2, y2) in boxes:
                 face = frame[y1:y2, x1:x2]

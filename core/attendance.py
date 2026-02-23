@@ -3,6 +3,7 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import os
 import time
+import logging
 
 
 class AttendanceManager:
@@ -42,10 +43,10 @@ class AttendanceManager:
         """
         try:
             self.sheet = self.spreadsheet.worksheet(sheet_name)
-            print(f"Switched to sheet: {sheet_name}")
+            logging.info(f"Switched to sheet: {sheet_name}")
             return True
         except gspread.WorksheetNotFound:
-            print(f" Worksheet '{sheet_name}' not found!")
+            logging.warning(f" Worksheet '{sheet_name}' not found!")
             return False
 
     def can_mark(self, student_id):
@@ -62,7 +63,7 @@ class AttendanceManager:
         Write attendance to Google Sheet
         """
         if self.sheet is None:
-            print("⚠️ No sheet selected! Cannot mark attendance.")
+            logging.warning("No sheet selected! Cannot mark attendance.")
             return False
 
         if not self.can_mark(student_id):
@@ -77,6 +78,6 @@ class AttendanceManager:
         )
 
         self.last_marked[student_id] = time.time()
-        print(f"Attendance marked for {student_id}")
+        logging.info(f"Attendance marked for {student_id}")
 
         return True

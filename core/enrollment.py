@@ -1,5 +1,6 @@
 import time
 import cv2
+import logging
 from utils.storage import save_embeddings
 
 
@@ -18,7 +19,7 @@ class Enroller:
         self.db.setdefault(name, [])
         self.count = 0
         self.active = True
-        print(f"Enrolling {name}...")
+        logging.info(f"Enrolling {name}...")
 
     def process(self, embedding, frame):
         if not self.active:
@@ -42,7 +43,7 @@ class Enroller:
         if self.count >= self.max_samples:
             save_embeddings(self.db)
             self.active = False
-            print(f"Enrollment complete for {self.name}")
+            logging.info(f"Enrollment complete for {self.name}")
 
             # THIS IS THE KEY LINE
             if self.on_update:

@@ -2,6 +2,7 @@ import numpy as np
 import onnxruntime as ort
 import os
 import sys
+import logging
 
 
 class FaceEmbedder:
@@ -24,7 +25,7 @@ class FaceEmbedder:
                 f"ONNX model NOT found at: {model_path}"
             )
 
-        print(f"[INFO] Loading ONNX model from: {model_path}")
+        logging.info(f"Loading ONNX model from: {model_path}")
 
         # Initialize ONNX Runtime session
         self.session = ort.InferenceSession(model_path)
