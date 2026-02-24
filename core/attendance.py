@@ -126,6 +126,31 @@ class AttendanceManager:
                     value_input_option="USER_ENTERED"
                 )
                 student_row_idx = new_row_idx
+                
+                # Copy data validation from row above
+                if new_row_idx > 3:
+                    sheet_id = self.sheet.id
+                    reqs = [{
+                        "copyPaste": {
+                            "source": {
+                                "sheetId": sheet_id,
+                                "startRowIndex": new_row_idx - 2,
+                                "endRowIndex": new_row_idx - 1,
+                                "startColumnIndex": 2,  # Dates start at col index 3 (0-based is 2)
+                                "endColumnIndex": len(headers)
+                            },
+                            "destination": {
+                                "sheetId": sheet_id,
+                                "startRowIndex": new_row_idx - 1,
+                                "endRowIndex": new_row_idx,
+                                "startColumnIndex": 2,
+                                "endColumnIndex": len(headers)
+                            },
+                            "pasteType": "PASTE_DATA_VALIDATION"
+                        }
+                    }]
+                    self.sheet.spreadsheet.batch_update({"requests": reqs})
+
             else:
                 self.sheet.update_cell(student_row_idx, col_idx, "P")
             
@@ -193,6 +218,30 @@ class AttendanceManager:
                         table_range=f"A{new_row_idx}",
                         value_input_option="USER_ENTERED"
                     )
+                    
+                    # Copy data validation from row above
+                    if new_row_idx > 3:
+                        sheet_id = self.sheet.id
+                        reqs = [{
+                            "copyPaste": {
+                                "source": {
+                                    "sheetId": sheet_id,
+                                    "startRowIndex": new_row_idx - 2,
+                                    "endRowIndex": new_row_idx - 1,
+                                    "startColumnIndex": 2,
+                                    "endColumnIndex": len(headers)
+                                },
+                                "destination": {
+                                    "sheetId": sheet_id,
+                                    "startRowIndex": new_row_idx - 1,
+                                    "endRowIndex": new_row_idx,
+                                    "startColumnIndex": 2,
+                                    "endColumnIndex": len(headers)
+                                },
+                                "pasteType": "PASTE_DATA_VALIDATION"
+                            }
+                        }]
+                        self.sheet.spreadsheet.batch_update({"requests": reqs})
                     
                     # Update local trackers so we don't process them again
                     sheet_students[student_name] = (new_row_idx, new_row)
