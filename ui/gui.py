@@ -323,6 +323,8 @@ class MainWindow(QWidget):
             self.camera_thread.stop()
             
         if getattr(self, 'is_taking_attendance', False):
+            if hasattr(self.camera_thread, 'attendance'):
+                threading.Thread(target=self.camera_thread.attendance.mark_absent_after_session, daemon=True).start()
             threading.Thread(target=send_stop_signal, daemon=True).start()
             self.is_taking_attendance = False
 
