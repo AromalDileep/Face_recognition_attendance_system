@@ -16,10 +16,9 @@ Thumbs.db
 # Models (VERY IMPORTANT)
 models/*.h5
 models/**/*.h5
-models/**/*.caffemodel
-
+# models/**/*.caffemodel
+# 
 # Face data & embeddings
-data/
 attendance/
 
 # Logs
@@ -30,6 +29,5 @@ service_account.json
 .env
 
 credentials/
-data/
 __pycache__/
 *.pkl
