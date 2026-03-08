@@ -28,6 +28,5 @@ attendance/
 service_account.json
 .env
 
-credentials/
 __pycache__/
 *.pkl
